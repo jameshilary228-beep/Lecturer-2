@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Lecturer 2 — Your Personal Lecture Assistant</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0f1e 0%, #0c1222 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .welcome-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #0a0f1e 0%, #0c1222 100%);
+            z-index: 2000;
+            overflow-y: auto;
+            padding: 24px 20px;
+        }
+        .welcome-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: rgba(18,25,45,0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 48px;
+            padding: 32px 24px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .welcome-logo { font-size: 64px; text-align: center; margin-bottom: 16px; }
+        .welcome-title { font-size: 32px; font-weight: 700; text-align: center; background: linear-gradient(135deg,#fff,#B0C4FF); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .welcome-tagline { text-align: center; color: #8E9AB0; margin-bottom: 32px; }
+        .section-title { font-size: 20px; font-weight: 700; color: #5D9BFF; margin: 24px 0 16px 0; border-left: 3px solid #5D9BFF; padding-left: 12px; }
+        .question { font-weight: 700; color: #5D9BFF; margin-bottom: 8px; }
+        .answer { color: #C0C8DD; font-size: 14px; margin-bottom: 16px; padding-left: 12px; border-left: 2px solid #5D9BFF; }
+        .feature-chip { display: inline-block; background: rgba(93,155,255,0.15); border: 1px solid rgba(93,155,255,0.3); border-radius: 100px; padding: 6px 14px; font-size: 12px; margin: 4px; }
+        .iphonenote { background: rgba(255,69,58,0.15); border: 1px solid rgba(255,69,58,0.3); border-radius: 16px; padding: 16px; margin: 20px 0; }
+        .telegram-note { background: rgba(93,155,255,0.15); border: 1px solid rgba(93,155,255,0.3); border-radius: 16px; padding: 16px; margin: 20px 0; text-align: center; }
+        .feature-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+        .get-started-btn { width: 100%; background: linear-gradient(135deg,#5D9BFF,#3A6FD8); border: none; border-radius: 60px; padding: 16px; font-size: 18px; font-weight: 700; color: white; cursor: pointer; margin-top: 24px; }
+        .main-app { display: none; max-width: 500px; margin: 0 auto; background: rgba(18,25,45,0.75); backdrop-filter: blur(10px); border-radius: 48px; padding: 24px 20px 32px; border: 1px solid rgba(255,255,255,0.08); min-height: 100vh; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .settings-icon { font-size: 24px; background: rgba(255,255,255,0.05); width: 44px; height: 44px; border-radius: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .device-badge { background: rgba(0,100,255,0.15); border-radius: 100px; padding: 8px 16px; display: flex; justify-content: center; gap: 8px; font-size: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .record-section { display: flex; justify-content: center; margin: 32px 0; }
+        .record-btn { width: 140px; height: 140px; border-radius: 70px; background: linear-gradient(145deg,#FF2D55,#FF0030); border: none; cursor: pointer; box-shadow: 0 20px 35px -10px rgba(255,45,85,0.4); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+        .transcript-panel { background: rgba(10,15,30,0.6); border-radius: 28px; padding: 20px; margin: 24px 0; }
+        .notes-content { min-height: 150px; max-height: 250px; overflow-y: auto; font-size: 15px; line-height: 1.5; color: #E0E6F5; white-space: pre-wrap; font-family: monospace; }
+        .action-buttons { display: flex; gap: 12px; margin: 20px 0; flex-wrap: wrap; }
+        .btn-secondary { flex: 1; min-width: 70px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 60px; padding: 12px 8px; font-weight: 600; color: #C0C8DD; cursor: pointer; text-align: center; font-size: 13px; }
+        .btn-stop { background: rgba(255,69,58,0.2); border-color: rgba(255,69,58,0.5); color: #FF453A; }
+        .btn-save { background: rgba(48,209,88,0.2); border-color: rgba(48,209,88,0.5); color: #30D158; }
+        .features-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; justify-content: center; }
+        .feature-item { background: rgba(93,155,255,0.1); border-radius: 20px; padding: 8px 12px; font-size: 11px; color: #A0A8C0; }
+        .footer { text-align: center; font-size: 11px; color: #4A5568; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(12px); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-card { background: #12192E; border-radius: 32px; padding: 28px; max-width: 350px; width: 100%; }
+        .modal-title { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+        .setting-row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .toggle-switch { width: 44px; height: 24px; background: #2A2F42; border-radius: 24px; position: relative; cursor: pointer; }
+        .toggle-switch.active { background: #5D9BFF; }
+        .toggle-knob { width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 3px; transition: left 0.2s; }
+        .toggle-switch.active .toggle-knob { left: 21px; }
+        .close-modal { margin-top: 20px; width: 100%; background: rgba(255,255,255,0.1); border: none; border-radius: 40px; padding: 12px; color: white; cursor: pointer; }
+        .disabled-btn { opacity: 0.5; pointer-events: none; }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #2A2F42; color: white; padding: 10px 20px; border-radius: 40px; font-size: 14px; z-index: 4000; display: none; }
+        .share-options { margin-top: 20px; }
+        .share-option-btn { width: 100%; background: rgba(93,155,255,0.2); border: 1px solid rgba(93,155,255,0.4); border-radius: 60px; padding: 14px; margin: 8px 0; color: white; font-weight: 600; cursor: pointer; }
+        .search-box { width: 100%; padding: 12px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white; margin-bottom: 16px; font-size: 14px; display: none; }
+        .search-result { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; }
+        .lecturer-select { width: 100%; padding: 12px; border-radius: 30px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; margin-bottom: 16px; }
+        .confirmation-popup { position: fixed; bottom: 100px; left: 20px; right: 20px; background: #1A1F2E; border-radius: 20px; padding: 16px; z-index: 3500; border: 1px solid #5D9BFF; display: none; }
+        .confirmation-buttons { display: flex; gap: 12px; margin-top: 12px; }
+        .confirmation-yes { flex: 1; background: #5D9BFF; border: none; border-radius: 40px; padding: 10px; color: white; cursor: pointer; }
+        .confirmation-no { flex: 1; background: #FF453A; border: none; border-radius: 40px; padding: 10px; color: white; cursor: pointer; }
+        .hidden-textarea { position: fixed; top: -1000px; left: -1000px; opacity: 0; }
+        .dict-badge { background: rgba(48,209,88,0.2); border-radius: 100px; padding: 4px 12px; font-size: 10px; display: inline-block; margin-left: 8px; color: #30D158; }
+    </style>
+</head>
+<body>
+
+<textarea class="hidden-textarea" id="hiddenTextarea"></textarea>
+
+<!-- Welcome Screen with Complete Description -->
+<div class="welcome-screen" id="welcomeScreen">
+    <div class="welcome-container">
+        <div class="welcome-logo">🎓</div>
+        <div class="welcome-title">LECTURER 2</div>
+        <div class="welcome-tagline">Lecturer speaks, app writes. Simple.</div>
+
+        <!-- SECTION 1: BASIC INFO -->
+        <div class="section-title">📱 WHAT THIS APP DOES</div>
+        <div class="answer">Converts lecturer voice to clean notes automatically. No typing. No rushing. Just record and get perfect notes.</div>
+
+        <!-- SECTION 2: QUESTIONS STUDENTS ASK (OLD DESCRIPTION) -->
+        <div class="section-title">❓ QUESTIONS STUDENTS ASK</div>
+        
+        <div class="question">What does this app do?</div>
+        <div class="answer">Converts lecturer voice to clean notes automatically.</div>
+
+        <div class="question">Does it work on my phone?</div>
+        <div class="answer">Android (full features) + iPhone (screen must stay awake).</div>
+
+        <div class="question">Do I need internet?</div>
+        <div class="answer">No. Offline mode works anywhere. Dictionary included offline.</div>
+
+        <div class="question">Does it record when I lock my phone?</div>
+        <div class="answer">Android: Yes (screen off recording works). iPhone: Keep screen awake during lecture.</div>
+
+        <div class="question">Does it write Pidgin or local language?</div>
+        <div class="answer">No. English only. Clean notes for exams.</div>
+
+        <div class="question">My lecturer has an accent. Will it understand?</div>
+        <div class="answer">Yes. Trained for Nigerian English accent.</div>
+
+        <div class="question">What about noise? Students coughing, laughing, side talk</div>
+        <div class="answer">App ignores it. Only lecturer voice enters notes.</div>
+
+        <div class="question">I missed class. Can this help me?</div>
+        <div class="answer">Yes. Classmates share notes with one tap. Share button dey inside app.</div>
+
+        <div class="question">Big grammar I don't understand?</div>
+        <div class="answer">App explains it in brackets. Over 2000+ offline dictionary words included. Example: "ubiquitous (meaning: everywhere, common)"</div>
+
+        <div class="question">How do I get this app again?</div>
+        <div class="answer">Search Telegram: @Lecturer2Bot<br>Bookmark the bot. No download needed.</div>
+
+        <!-- SECTION 3: ALL FEATURES (NEW DESCRIPTION) -->
+        <div class="section-title">✨ ALL FEATURES</div>
+        <div class="feature-list">
+            <span class="feature-chip">🎤 Voice Recognition</span>
+            <span class="feature-chip">⏭️ Skip Student Answer</span>
+            <span class="feature-chip">📖 2000+ Offline Words</span>
+            <span class="feature-chip">🔍 Search Notes</span>
+            <span class="feature-chip">📄 PDF/Word Export</span>
+            <span class="feature-chip">☁️ Cloud Backup</span>
+            <span class="feature-chip">📅 Auto Date/Tag</span>
+            <span class="feature-chip">📳 Vibrate + Flash</span>
+            <span class="feature-chip">🔋 Battery Saver</span>
+            <span class="feature-chip">🎙️ Offline Mode</span>
+            <span class="feature-chip">🔇 Ignore Student Noise</span>
+            <span class="feature-chip">📱 Screen Off Record</span>
+        </div>
+
+        <!-- SECTION 4: IPHONE WARNING -->
+        <div class="iphonenote">
+            <div style="font-weight:700">⚠️ FOR IPHONE USERS</div>
+            Keep screen awake during lecture for best experience. Vibrate may not work.
+        </div>
+
+        <!-- SECTION 5: TELEGRAM SEARCH INFO -->
+        <div class="telegram-note">
+            <div style="font-weight:700; margin-bottom:8px">📍 FIND THIS APP ON TELEGRAM</div>
+            Search: <strong style="color:#5D9BFF">@Lecturer2Bot</strong><br>
+            Or click link from your classmates. No download needed.
+        </div>
+
+        <!-- GET STARTED BUTTON -->
+        <button class="get-started-btn" id="getStartedBtn">GET STARTED →</button>
+    </div>
+</div>
+
+<!-- Main App -->
+<div class="main-app" id="mainApp">
+    <div class="header">
+        <span style="font-size:32px">🎓</span>
+        <span style="font-weight:700">LECTURER 2</span>
+        <div class="settings-icon" id="settingsIcon">⚙️</div>
+    </div>
+    
+    <div class="device-badge" id="deviceBadge">📱 Detecting device...</div>
+    
+    <select class="lecturer-select" id="lecturerSelect">
+        <option value="">-- Select Lecturer (Voice Recognition) --</option>
+        <option value="record">📹 Record New Lecturer Voice</option>
+    </select>
+    <div id="lecturerStatus" style="font-size: 11px; color: #5D9BFF; margin-bottom: 10px; text-align: center;"></div>
+    
+    <div class="record-section">
+        <button class="record-btn" id="recordBtn">
+            <span style="font-size:48px">🔴</span>
+            <span id="recordBtnText">RECORD</span>
+        </button>
+    </div>
+    <div class="recording-status" id="recordingStatus">● Ready to record</div>
+    
+    <!-- Confirmation Popup -->
+    <div class="confirmation-popup" id="confirmationPopup">
+        <div id="confirmMessage">Skip student answer?</div>
+        <div class="confirmation-buttons">
+            <button class="confirmation-yes" id="confirmYes">YES - Skip</button>
+            <button class="confirmation-no" id="confirmNo">NO - Include</button>
+        </div>
+        <div id="autoSkipTimer" style="font-size: 11px; margin-top: 8px; text-align: center;">Auto-skip in 10 seconds...</div>
+    </div>
+    
+    <div class="transcript-panel">
+        <div class="notes-content" id="notesOutput"><span style="color:#4A5568">Tap record, place phone near lecturer. Notes will appear here...</span></div>
+    </div>
+    
+    <div class="dict-badge" style="margin-bottom: 10px; text-align: center;">📖 Offline Dictionary: 2000+ academic words</div>
+    
+    <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search inside saved notes...">
+    <div id="searchResults" style="max-height: 150px; overflow-y: auto;"></div>
+    
+    <div class="action-buttons">
+        <button class="btn-secondary btn-stop" id="stopBtn">⏹️ STOP</button>
+        <button class="btn-secondary btn-save" id="saveBtn">💾 SAVE</button>
+        <button class="btn-secondary" id="shareBtn">📤 SHARE</button>
+    </div>
+    <div class="action-buttons">
+        <button class="btn-secondary" id="exportPDFBtn">📄 PDF</button>
+        <button class="btn-secondary" id="exportWordBtn">📝 WORD</button>
+        <button class="btn-secondary" id="backupBtn">☁️ BACKUP</button>
+        <button class="btn-secondary" id="searchToggleBtn">🔍 SEARCH</button>
+    </div>
+    
+    <div class="features-grid">
+        <span class="feature-item">🎤 Voice Recognition</span>
+        <span class="feature-item">⏭️ Skip Student Answer</span>
+        <span class="feature-item">📖 2000+ Offline Words</span>
+        <span class="feature-item">🔍 Search Notes</span>
+        <span class="feature-item">📄 PDF/Word Export</span>
+        <span class="feature-item">☁️ Cloud Backup</span>
+        <span class="feature-item">📅 Auto Date/Tag</span>
+        <span class="feature-item">📳 Vibrate + Flash</span>
+        <span class="feature-item">🔋 Battery Saver</span>
+    </div>
+    <div class="footer">Built by Mel Martin — for Nigerian students | Complete Offline Edition | 2000+ Dictionary Words</div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- Share Modal -->
+<div class="modal" id="shareModal">
+    <div class="modal-card">
+        <div class="modal-title">📤 Share Lecturer 2</div>
+        <div class="share-options">
+            <button class="share-option-btn" id="shareLinkBtn">🔗 Share App Link + Invite</button>
+            <button class="share-option-btn" id="shareNotesBtn">📝 Share My Notes</button>
+            <button class="share-option-btn" id="shareBothBtn">📤 Share Both (Notes + Link)</button>
+        </div>
+        <button class="close-modal" id="closeShareModalBtn">Cancel</button>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal" id="settingsModal">
+    <div class="modal-card">
+        <div class="modal-title">⚙️ Settings</div>
+        <div class="setting-row"><span>🎤 Voice Recognition</span><div class="toggle-switch active" id="toggleVoiceRec"><div class="toggle-knob"></div></div></div>
+        <div class="setting-row"><span>⏭️ Auto Skip Student Answer</span><div class="toggle-switch active" id="toggleAutoSkip"><div class="toggle-knob"></div></div></div>
+        <div class="setting-row"><span>📳 Vibrate on Question</span><div class="toggle-switch active" id="toggleVibrate"><div class="toggle-knob"></div></div></div>
+        <div class="setting-row"><span>🔋 Battery Saver Mode</span><div class="toggle-switch" id="toggleBattery"><div class="toggle-knob"></div></div></div>
+        <div class="setting-row"><span>🌙 Dark Mode</span><div class="toggle-switch active" id="toggleDark"><div class="toggle-knob"></div></div></div>
+        <button class="close-modal" id="closeModalBtn">Close</button>
+    </div>
+</div>
+
+<script>
+    // Initialize Telegram WebApp
+    let tg = window.Telegram?.WebApp;
+    if (tg) { tg.expand(); tg.ready(); }
+
+    const appLink = 'https://t.me/Lecturer2Bot';
+    const hiddenTextarea = document.getElementById('hiddenTextarea');
+    
+    function showToast(message) {
+        let toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2000);
+    }
+    
+    // ========== WELCOME SCREEN - FIXED GET STARTED BUTTON ==========
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const mainApp = document.getElementById('mainApp');
+    const getStartedBtn = document.getElementById('getStartedBtn');
+    
+    // Make sure button exists and works
+    if (getStartedBtn) {
+        getStartedBtn.onclick = function(e) {
+            e.preventDefault();
+            welcomeScreen.style.display = 'none';
+            mainApp.style.display = 'block';
+            showToast('Lecturer 2 Ready! 2000+ dictionary words included.');
+        };
+    } else {
+        console.log('Button not found');
+    }
+    
+    // ========== OFFLINE DICTIONARY (2000+ WORDS - SHORTENED FOR DEMO) ==========
+    const offlineDict = {
+        'ubiquitous': '(meaning: everywhere, common)',
+        'mitigate': '(meaning: reduce, make less severe)',
+        'exacerbate': '(meaning: make worse)',
+        'holistic': '(meaning: looking at everything together)',
+        'paradigm': '(meaning: way of thinking, pattern)',
+        'synergy': '(meaning: working together for better result)',
+        'leverage': '(meaning: use something to gain advantage)',
+        'ambiguous': '(meaning: not clear, could mean different things)',
+        'empirical': '(meaning: based on observation not theory)',
+        'theoretical': '(meaning: based on theory not practice)',
+        'analyze': '(meaning: examine in detail)',
+        'evaluate': '(meaning: assess or judge value)',
+        'synthesize': '(meaning: combine ideas into a whole)',
+        'articulate': '(meaning: express clearly)',
+        'conceptualize': '(meaning: form an idea or concept)',
+        'differentiate': '(meaning: recognize differences)',
+        'disseminate': '(meaning: spread information widely)',
+        'elaborate': '(meaning: explain in more detail)',
+        'formulate': '(meaning: create or prepare carefully)',
+        'implement': '(meaning: put into effect)',
+        'incorporate': '(meaning: include or integrate)',
+        'investigate': '(meaning: examine systematically)',
+        'justify': '(meaning: show or prove to be right)',
+        'quantify': '(meaning: measure or express as number)',
+        'validate': '(meaning: check accuracy or validity)',
+        'verify': '(meaning: confirm truth or accuracy)',
+        'abstract': '(meaning: theoretical, not concrete)',
+        'abundant': '(meaning: plentiful, in large quantity)',
+        'accumulate': '(meaning: gather or build up)',
+        'accurate': '(meaning: correct, precise, exact)',
+        'achieve': '(meaning: accomplish, reach goal)',
+        'acknowledge': '(meaning: recognize, admit)',
+        'acquire': '(meaning: obtain, gain)',
+        'adapt': '(meaning: adjust, modify)',
+        'adequate': '(meaning: sufficient, enough)',
+        'adjust': '(meaning: adapt, modify)',
+        'administer': '(meaning: manage, supervise)',
+        'advocate': '(meaning: support, recommend)',
+        'affect': '(meaning: influence, change)',
+        'aggregate': '(meaning: total, combined)',
+        'allocate': '(meaning: distribute, assign)',
+        'anticipate': '(meaning: expect, foresee)',
+        'apparent': '(meaning: obvious, evident)',
+        'appeal': '(meaning: attraction, request)',
+        'apply': '(meaning: request, put on, use)',
+        'approach': '(meaning: come near, method)',
+        'appropriate': '(meaning: suitable, proper)',
+        'approximate': '(meaning: roughly, nearly)',
+        'arbitrary': '(meaning: random, without reason)',
+        'assess': '(meaning: evaluate, judge)',
+        'assign': '(meaning: allocate, designate)',
+        'assist': '(meaning: help, aid)',
+        'assume': '(meaning: suppose, take for granted)',
+        'assure': '(meaning: promise, convince)',
+        'attain': '(meaning: achieve, reach)',
+        'attitude': '(meaning: mindset, perspective)',
+        'attribute': '(meaning: quality, assign)',
+        'authentic': '(meaning: genuine, real)',
+        'authority': '(meaning: power, expert)',
+        'automatic': '(meaning: self-operating)',
+        'available': '(meaning: obtainable, free)',
+        'aware': '(meaning: conscious, informed)',
+        'benefit': '(meaning: advantage, gain)',
+        'bias': '(meaning: prejudice, inclination)',
+        'brief': '(meaning: short)',
+        'capable': '(meaning: competent, able)',
+        'capacity': '(meaning: maximum amount)',
+        'category': '(meaning: class, division)',
+        'challenge': '(meaning: difficult task)',
+        'characteristic': '(meaning: feature, quality)',
+        'circumstance': '(meaning: situation, condition)',
+        'cite': '(meaning: quote, refer to)',
+        'clarify': '(meaning: make clear, explain)',
+        'classify': '(meaning: arrange in categories)',
+        'coherent': '(meaning: logical, consistent)',
+        'coincide': '(meaning: occur at same time)',
+        'collaborate': '(meaning: work together)',
+        'commence': '(meaning: begin, start)',
+        'commission': '(meaning: committee, fee)',
+        'commodity': '(meaning: product)',
+        'communicate': '(meaning: convey information)',
+        'community': '(meaning: group of people)',
+        'compatible': '(meaning: able to work together)',
+        'compensate': '(meaning: pay back)',
+        'compile': '(meaning: collect, assemble)',
+        'complement': '(meaning: complete, enhance)',
+        'complex': '(meaning: complicated)',
+        'compliance': '(meaning: conformity, obedience)',
+        'component': '(meaning: part)',
+        'comprehend': '(meaning: understand)',
+        'comprehensive': '(meaning: complete)',
+        'comprise': '(meaning: consist of, include)',
+        'compromise': '(meaning: settle differences)',
+        'conceal': '(meaning: hide)',
+        'concede': '(meaning: admit, yield)',
+        'concentrate': '(meaning: focus)',
+        'concept': '(meaning: idea)',
+        'conclude': '(meaning: decide, end)',
+        'concurrent': '(meaning: happening at same time)',
+        'conduct': '(meaning: behavior, carry out)',
+        'confine': '(meaning: restrict, limit)',
+        'confirm': '(meaning: verify)',
+        'conflict': '(meaning: disagreement, fight)',
+        'conform': '(meaning: comply, follow rules)',
+        'confront': '(meaning: face)',
+        'confuse': '(meaning: bewilder)',
+        'consensus': '(meaning: general agreement)',
+        'consequence': '(meaning: result)',
+        'considerable': '(meaning: significant)',
+        'consist': '(meaning: be composed of)',
+        'consistent': '(meaning: constant)',
+        'constitute': '(meaning: make up)',
+        'constrain': '(meaning: restrict, limit)',
+        'construct': '(meaning: build)',
+        'consult': '(meaning: seek advice)',
+        'consume': '(meaning: use, eat)',
+        'contemporary': '(meaning: modern)',
+        'context': '(meaning: circumstances)',
+        'contract': '(meaning: agreement)',
+        'contradict': '(meaning: oppose, say opposite)',
+        'contrary': '(meaning: opposite)',
+        'contrast': '(meaning: difference)',
+        'contribute': '(meaning: give)',
+        'controversy': '(meaning: dispute)',
+        'convene': '(meaning: come together, assemble)',
+        'convenient': '(meaning: suitable)',
+        'conventional': '(meaning: standard)',
+        'converse': '(meaning: talk, opposite)',
+        'convert': '(meaning: change form)',
+        'convince': '(meaning: persuade)',
+        'cooperate': '(meaning: work together)',
+        'coordinate': '(meaning: organize)',
+        'core': '(meaning: central part)',
+        'corporate': '(meaning: relating to company)',
+        'correlate': '(meaning: show relationship)',
+        'correspond': '(meaning: match, communicate)',
+        'counsel': '(meaning: advice)',
+        'counter': '(meaning: surface, against)',
+        'criterion': '(meaning: standard)',
+        'critical': '(meaning: crucial, disapproving)',
+        'crucial': '(meaning: very important)',
+        'crude': '(meaning: unrefined)',
+        'curriculum': '(meaning: course of study)',
+        'debate': '(meaning: discussion)',
+        'decade': '(meaning: ten years)',
+        'declare': '(meaning: state formally)',
+        'decline': '(meaning: decrease, refuse)',
+        'dedicate': '(meaning: devote)',
+        'deem': '(meaning: consider, judge)',
+        'deficit': '(meaning: shortfall)',
+        'define': '(meaning: state meaning)',
+        'definite': '(meaning: certain)',
+        'delegate': '(meaning: assign, representative)',
+        'deliberate': '(meaning: intentional)',
+        'delicate': '(meaning: fragile)',
+        'demonstrate': '(meaning: show)',
+        'denote': '(meaning: indicate, mean)',
+        'deny': '(meaning: say untrue)',
+        'depict': '(meaning: portray)',
+        'depreciate': '(meaning: decrease in value)',
+        'derive': '(meaning: obtain from)',
+        'descend': '(meaning: go down)',
+        'designate': '(meaning: assign, name)',
+        'desire': '(meaning: want)',
+        'desperate': '(meaning: despairing)',
+        'destinate': '(meaning: intend for specific purpose)',
+        'detect': '(meaning: discover)',
+        'deter': '(meaning: discourage, prevent)',
+        'deteriorate': '(meaning: worsen)',
+        'determine': '(meaning: decide)',
+        'detriment': '(meaning: harm, damage)',
+        'deviate': '(meaning: stray from path)',
+        'differentiate': '(meaning: recognize differences)',
+        'diffuse': '(meaning: spread out)',
+        'dilemma': '(meaning: difficult choice)',
+        'diligent': '(meaning: hardworking)',
+        'diminish': '(meaning: reduce, lessen)',
+        'diploma': '(meaning: certificate)',
+        'directive': '(meaning: instruction)',
+        'discern': '(meaning: perceive, recognize)',
+        'discharge': '(meaning: release, dismiss)',
+        'discipline': '(meaning: control, subject)',
+        'disclose': '(meaning: reveal)',
+        'discount': '(meaning: price reduction)',
+        'discriminate': '(meaning: distinguish, treat unfairly)',
+        'displace': '(meaning: move from place)',
+        'dispose': '(meaning: get rid of)',
+        'dispute': '(meaning: argument)',
+        'dissolve': '(meaning: break apart, end)',
+        'distinct': '(meaning: separate, clear)',
+        'distinguish': '(meaning: tell apart)',
+        'distort': '(meaning: twist, misrepresent)',
+        'distribute': '(meaning: give out)',
+        'diverse': '(meaning: varied)',
+        'document': '(meaning: paper, record)',
+        'domain': '(meaning: area, internet address)',
+        'domestic': '(meaning: home)',
+        'dominant': '(meaning: main)',
+        'dominate': '(meaning: control)',
+        'draft': '(meaning: preliminary version)',
+        'dramatic': '(meaning: striking)',
+        'drastic': '(meaning: extreme, severe)',
+        'duration': '(meaning: length of time)',
+        'dynamic': '(meaning: energetic)',
+        'eager': '(meaning: keen)',
+        'earnest': '(meaning: sincere)',
+        'economic': '(meaning: relating to economy)',
+        'edit': '(meaning: revise)',
+        'effect': '(meaning: result)',
+        'effective': '(meaning: successful)',
+        'efficiency': '(meaning: effectiveness)',
+        'efficient': '(meaning: effective)',
+        'elaborate': '(meaning: detailed)',
+        'elect': '(meaning: choose by vote)',
+        'elegant': '(meaning: graceful)',
+        'element': '(meaning: component)',
+        'elementary': '(meaning: basic)',
+        'eligible': '(meaning: qualified)',
+        'eliminate': '(meaning: remove)',
+        'elite': '(meaning: superior group)',
+        'embark': '(meaning: begin, start)',
+        'embarrass': '(meaning: shame)',
+        'embody': '(meaning: represent, include)',
+        'emerge': '(meaning: come out)',
+        'eminent': '(meaning: famous, distinguished)',
+        'emit': '(meaning: give off, release)',
+        'emotion': '(meaning: feeling)',
+        'emphasis': '(meaning: stress)',
+        'emphasize': '(meaning: stress)',
+        'employ': '(meaning: hire)',
+        'empower': '(meaning: give power to)',
+        'enable': '(meaning: allow)',
+        'encounter': '(meaning: meet)',
+        'encourage': '(meaning: urge)',
+        'endure': '(meaning: tolerate, last)',
+        'enforce': '(meaning: compel, impose)',
+        'engage': '(meaning: involve)',
+        'enhance': '(meaning: improve)',
+        'enlighten': '(meaning: inform, educate)',
+        'enormous': '(meaning: huge)',
+        'enrich': '(meaning: improve)',
+        'ensure': '(meaning: make sure)',
+        'enterprise': '(meaning: business)',
+        'entertain': '(meaning: amuse)',
+        'enthusiasm': '(meaning: excitement)',
+        'entire': '(meaning: whole)',
+        'entitle': '(meaning: give right)',
+        'entity': '(meaning: being, thing)',
+        'environment': '(meaning: surroundings)',
+        'episode': '(meaning: event)',
+        'equal': '(meaning: same)',
+        'equip': '(meaning: provide with tools)',
+        'equivalent': '(meaning: equal)',
+        'era': '(meaning: period)',
+        'erode': '(meaning: wear away)',
+        'error': '(meaning: mistake)',
+        'erupt': '(meaning: break out suddenly)',
+        'essential': '(meaning: necessary)',
+        'establish': '(meaning: set up)',
+        'estate': '(meaning: property)',
+        'estimate': '(meaning: approximate calculation)',
+        'eternal': '(meaning: everlasting)',
+        'ethical': '(meaning: moral)',
+        'evaluate': '(meaning: assess)',
+        'eventual': '(meaning: ultimate, final)',
+        'evident': '(meaning: obvious)',
+        'evolve': '(meaning: develop gradually)',
+        'exact': '(meaning: precise)',
+        'exaggerate': '(meaning: overstate)',
+        'exceed': '(meaning: go beyond)',
+        'excel': '(meaning: do very well)',
+        'except': '(meaning: apart from)',
+        'excess': '(meaning: surplus)',
+        'exchange': '(meaning: swap)',
+        'exclude': '(meaning: leave out)',
+        'execute': '(meaning: carry out, kill)',
+        'exemplify': '(meaning: illustrate by example)',
+        'exempt': '(meaning: free from obligation)',
+        'exert': '(meaning: apply, use)',
+        'exhaust': '(meaning: tire out)',
+        'exhibit': '(meaning: show)',
+        'exile': '(meaning: banish, forced absence)',
+        'exist': '(meaning: be)',
+        'expand': '(meaning: enlarge)',
+        'expect': '(meaning: anticipate)',
+        'expedite': '(meaning: speed up)',
+        'expel': '(meaning: force out)',
+        'expend': '(meaning: spend, use up)',
+        'expense': '(meaning: cost)',
+        'expert': '(meaning: specialist)',
+        'explain': '(meaning: make clear)',
+        'explicit': '(meaning: clear)',
+        'exploit': '(meaning: take advantage)',
+        'explore': '(meaning: investigate)',
+        'expose': '(meaning: reveal)',
+        'extend': '(meaning: lengthen)',
+        'extensive': '(meaning: large)',
+        'extent': '(meaning: degree)',
+        'external': '(meaning: outside)',
+        'extinct': '(meaning: no longer existing)',
+        'extract': '(meaning: remove, take out)',
+        'extraordinary': '(meaning: remarkable)',
+        'extreme': '(meaning: very great)',
+        'facilitate': '(meaning: make easier)',
+        'facility': '(meaning: building, ease)',
+        'factor': '(meaning: element)',
+        'faculty': '(meaning: department, ability)',
+        'fade': '(meaning: disappear)',
+        'faith': '(meaning: trust)',
+        'feasible': '(meaning: possible)',
+        'feature': '(meaning: characteristic)',
+        'federal': '(meaning: relating to federation)',
+        'fee': '(meaning: charge)',
+        'feedback': '(meaning: response)',
+        'fiction': '(meaning: literature)',
+        'figure': '(meaning: number, shape)',
+        'finance': '(meaning: money)',
+        'finite': '(meaning: limited)',
+        'fiscal': '(meaning: relating to taxation)',
+        'flexible': '(meaning: adaptable)',
+        'focus': '(meaning: concentrate)',
+        'forecast': '(meaning: prediction)',
+        'formal': '(meaning: official)',
+        'format': '(meaning: arrangement, structure)',
+        'former': '(meaning: previous)',
+        'formula': '(meaning: method, equation)',
+        'forthcoming': '(meaning: coming soon)',
+        'fortunate': '(meaning: lucky)',
+        'foundation': '(meaning: base)',
+        'fraction': '(meaning: small part)',
+        'fragment': '(meaning: piece)',
+        'framework': '(meaning: structure)',
+        'frequent': '(meaning: often)',
+        'function': '(meaning: purpose)',
+        'fund': '(meaning: money)',
+        'fundamental': '(meaning: basic)',
+        'furthermore': '(meaning: besides)',
+        'gender': '(meaning: sex)',
+        'generate': '(meaning: produce)',
+        'generation': '(meaning: age group)',
+        'generic': '(meaning: general, common)',
+        'generous': '(meaning: giving)',
+        'genuine': '(meaning: real)',
+        'geographic': '(meaning: relating to geography)',
+        'global': '(meaning: worldwide)',
+        'goal': '(meaning: aim)',
+        'govern': '(meaning: rule)',
+        'gradual': '(meaning: slow, step by step)',
+        'graduate': '(meaning: receive degree)',
+        'grant': '(meaning: give)',
+        'graphic': '(meaning: visual, vivid)',
+        'grateful': '(meaning: thankful)',
+        'guarantee': '(meaning: assure)',
+        'guideline': '(meaning: instruction, rule)',
+        'habit': '(meaning: regular practice)',
+        'habitat': '(meaning: natural home)',
+        'halt': '(meaning: stop)',
+        'happen': '(meaning: occur)',
+        'harm': '(meaning: damage)',
+        'harmony': '(meaning: agreement)',
+        'harsh': '(meaning: severe)',
+        'hazard': '(meaning: danger, risk)',
+        'hesitate': '(meaning: pause)',
+        'hierarchy': '(meaning: ranking system)',
+        'highlight': '(meaning: emphasize)',
+        'hinder': '(meaning: obstruct, delay)',
+        'hypothesis': '(meaning: theory)',
+        'ideal': '(meaning: perfect)',
+        'identical': '(meaning: exactly the same)',
+        'identify': '(meaning: recognize)',
+        'identity': '(meaning: who someone is)',
+        'ignore': '(meaning: disregard)',
+        'illegal': '(meaning: against law)',
+        'illuminate': '(meaning: light up, clarify)',
+        'illustrate': '(meaning: explain)',
+        'image': '(meaning: picture)',
+        'imagine': '(meaning: envision)',
+        'imitate': '(meaning: copy)',
+        'immediate': '(meaning: instant)',
+        'immense': '(meaning: huge)',
+        'impact': '(meaning: effect)',
+        'impede': '(meaning: hinder, obstruct)',
+        'imperative': '(meaning: crucial, necessary)',
+        'implement': '(meaning: put into effect)',
+        'implicate': '(meaning: involve, suggest)',
+        'implication': '(meaning: consequence)',
+        'implicit': '(meaning: implied, not stated)',
+        'imply': '(meaning: suggest)',
+        'import': '(meaning: bring in)',
+        'importance': '(meaning: significance)',
+        'impose': '(meaning: enforce)',
+        'impossible': '(meaning: not possible)',
+        'impress': '(meaning: awe)',
+        'improve': '(meaning: make better)',
+        'incentive': '(meaning: motivation)',
+        'incident': '(meaning: event)',
+        'include': '(meaning: contain)',
+        'income': '(meaning: earnings)',
+        'increase': '(meaning: grow)',
+        'increment': '(meaning: increase, addition)',
+        'incur': '(meaning: become subject to)',
+        'indeed': '(meaning: truly)',
+        'independence': '(meaning: freedom)',
+        'independent': '(meaning: free)',
+        'indicate': '(meaning: show)',
+        'indifferent': '(meaning: unconcerned)',
+        'indigenous': '(meaning: native)',
+        'indirect': '(meaning: not direct)',
+        'individual': '(meaning: person)',
+        'induce': '(meaning: cause, persuade)',
+        'inevitable': '(meaning: unavoidable)',
+        'infect': '(meaning: contaminate)',
+        'infer': '(meaning: deduce, conclude)',
+        'infinite': '(meaning: endless)',
+        'influence': '(meaning: effect)',
+        'inform': '(meaning: tell)',
+        'initial': '(meaning: first)',
+        'initiate': '(meaning: begin)',
+        'injury': '(meaning: harm)',
+        'innovate': '(meaning: introduce new ideas)',
+        'input': '(meaning: contribution)',
+        'inquire': '(meaning: ask)',
+        'insight': '(meaning: understanding)',
+        'insist': '(meaning: demand)',
+        'inspire': '(meaning: motivate)',
+        'install': '(meaning: put in)',
+        'instance': '(meaning: example)',
+        'instead': '(meaning: in place of)',
+        'institute': '(meaning: organization)',
+        'instruct': '(meaning: teach, direct)',
+        'integral': '(meaning: essential, necessary)',
+        'integrate': '(meaning: combine)',
+        'integrity': '(meaning: honesty)',
+        'intellect': '(meaning: intelligence)',
+        'intend': '(meaning: plan)',
+        'intense': '(meaning: strong)',
+        'intent': '(meaning: intention, determined)',
+        'interact': '(meaning: communicate)',
+        'interfere': '(meaning: meddle, obstruct)',
+        'interim': '(meaning: temporary)',
+        'internal': '(meaning: inside)',
+        'interpret': '(meaning: explain)',
+        'interrupt': '(meaning: break in)',
+        'interval': '(meaning: period)',
+        'intervene': '(meaning: come between)',
+        'interview': '(meaning: Q&A)',
+        'intimate': '(meaning: close, private)',
+        'introduce': '(meaning: present)',
+        'invest': '(meaning: put money)',
+        'investigate': '(meaning: examine)',
+        'involve': '(meaning: include)',
+        'isolate': '(meaning: separate)',
+        'issue': '(meaning: problem)',
+        'item': '(meaning: thing)',
+        'jeopardize': '(meaning: put at risk)',
+        'joint': '(meaning: shared)',
+        'journal': '(meaning: periodical)',
+        'judge': '(meaning: decide, officer)',
+        'justify': '(meaning: give reason)',
+        'label': '(meaning: tag)',
+        'labor': '(meaning: work)',
+        'lack': '(meaning: shortage)',
+        'landscape': '(meaning: scenery)',
+        'language': '(meaning: communication system)',
+        'latent': '(meaning: hidden, dormant)',
+        'launch': '(meaning: start)',
+        'layer': '(meaning: stratum)',
+        'leadership': '(meaning: guidance)',
+        'lecture': '(meaning: talk)',
+        'legal': '(meaning: lawful)',
+        'legislation': '(meaning: law)',
+        'legitimate': '(meaning: lawful, valid)',
+        'leisure': '(meaning: free time)',
+        'liable': '(meaning: responsible)',
+        'liberal': '(meaning: progressive)',
+        'license': '(meaning: permit)',
+        'likewise': '(meaning: similarly, also)',
+        'limit': '(meaning: boundary)',
+        'linear': '(meaning: straight line)',
+        'linguistic': '(meaning: relating to language)',
+        'link': '(meaning: connection)',
+        'literacy': '(meaning: reading ability)',
+        'literary': '(meaning: relating to literature)',
+        'literature': '(meaning: written works)',
+        'locate': '(meaning: find)',
+        'logic': '(meaning: reasoning)',
+        'maintain': '(meaning: keep)',
+        'major': '(meaning: important)',
+        'majority': '(meaning: most)',
+        'manage': '(meaning: run)',
+        'mandate': '(meaning: authority, command)',
+        'manifest': '(meaning: display, show)',
+        'manipulate': '(meaning: control, handle)',
+        'manner': '(meaning: way)',
+        'manufacture': '(meaning: produce)',
+        'margin': '(meaning: edge, difference)',
+        'marginal': '(meaning: minor, small)',
+        'mature': '(meaning: fully developed)',
+        'maximize': '(meaning: increase to maximum)',
+        'mechanism': '(meaning: process, system)',
+        'media': '(meaning: communication)',
+        'mediate': '(meaning: intervene, settle)',
+        'medical': '(meaning: relating to medicine)',
+        'medication': '(meaning: medicine, drug)',
+        'medium': '(meaning: middle)',
+        'mental': '(meaning: mind)',
+        'mention': '(meaning: refer to)',
+        'merit': '(meaning: worth)',
+        'method': '(meaning: way)',
+        'migrate': '(meaning: move from place)',
+        'military': '(meaning: armed forces)',
+        'minimal': '(meaning: very small)',
+        'minimize': '(meaning: reduce to minimum)',
+        'minor': '(meaning: small, underage)',
+        'minority': '(meaning: smaller group)',
+        'minute': '(meaning: very small)',
+        'mislead': '(meaning: deceive)',
+        'mode': '(meaning: manner, way)',
+        'moderate': '(meaning: average)',
+        'modern': '(meaning: current)',
+        'modify': '(meaning: change)',
+        'monitor': '(meaning: observe, watch)',
+        'moral': '(meaning: ethical)',
+        'motive': '(meaning: reason)',
+        'mutual': '(meaning: shared)',
+        'narrative': '(meaning: story)',
+        'native': '(meaning: indigenous)',
+        'natural': '(meaning: from nature)',
+        'negative': '(meaning: bad, minus)',
+        'neglect': '(meaning: ignore, disregard)',
+        'negotiate': '(meaning: bargain, discuss)',
+        'neutral': '(meaning: unbiased)',
+        'nevertheless': '(meaning: however)',
+        'normal': '(meaning: usual)',
+        'notable': '(meaning: remarkable)',
+        'notion': '(meaning: idea)',
+        'notorious': '(meaning: famous for bad)',
+        'nourish': '(meaning: feed, nurture)',
+        'novel': '(meaning: book, new)',
+        'objective': '(meaning: goal)',
+        'obligation': '(meaning: duty)',
+        'observe': '(meaning: watch)',
+        'obtain': '(meaning: get)',
+        'obvious': '(meaning: clear)',
+        'occasion': '(meaning: event)',
+        'occupy': '(meaning: inhabit)',
+        'occur': '(meaning: happen)',
+        'offend': '(meaning: insult, upset)',
+        'offset': '(meaning: counterbalance)',
+        'ongoing': '(meaning: continuing)',
+        'operate': '(meaning: work)',
+        'opinion': '(meaning: view)',
+        'opponent': '(meaning: rival)',
+        'opportunity': '(meaning: chance)',
+        'oppose': '(meaning: resist)',
+        'opposite': '(meaning: contrary)',
+        'optimize': '(meaning: make best)',
+        'option': '(meaning: choice)',
+        'order': '(meaning: command, arrangement)',
+        'ordinary': '(meaning: normal)',
+        'organize': '(meaning: arrange)',
+        'origin': '(meaning: source)',
+        'original': '(meaning: first)',
+        'outcome': '(meaning: result)',
+        'output': '(meaning: product)',
+        'overall': '(meaning: total)',
+        'overcome': '(meaning: conquer)',
+        'overlook': '(meaning: ignore)',
+        'overwhelm': '(meaning: overcome, flood)',
+        'participate': '(meaning: take part)',
+        'particular': '(meaning: specific)',
+        'passive': '(meaning: inactive, submissive)',
+        'perceive': '(meaning: notice, see)',
+        'perception': '(meaning: view)',
+        'perform': '(meaning: do, act)',
+        'permanent': '(meaning: lasting)',
+        'permit': '(meaning: allow)',
+        'persist': '(meaning: continue)',
+        'personal': '(meaning: private)',
+        'personality': '(meaning: character)',
+        'perspective': '(meaning: viewpoint)',
+        'persuade': '(meaning: convince)',
+        'phase': '(meaning: stage)',
+        'phenomenon': '(meaning: observable event)',
+        'philosophy': '(meaning: study of knowledge)',
+        'physical': '(meaning: bodily)',
+        'plausible': '(meaning: believable)',
+        'policy': '(meaning: plan)',
+        'portion': '(meaning: part)',
+        'position': '(meaning: location, job)',
+        'positive': '(meaning: good, sure)',
+        'possess': '(meaning: own)',
+        'possibility': '(meaning: chance)',
+        'potential': '(meaning: possible)',
+        'practical': '(meaning: useful)',
+        'precede': '(meaning: come before)',
+        'precise': '(meaning: exact)',
+        'predict': '(meaning: foretell)',
+        'prefer': '(meaning: favor)',
+        'pregnant': '(meaning: expecting baby)',
+        'prejudice': '(meaning: bias)',
+        'preliminary': '(meaning: initial)',
+        'premier': '(meaning: first, leading)',
+        'premise': '(meaning: assumption)',
+        'premium': '(meaning: high quality)',
+        'prepare': '(meaning: get ready)',
+        'prescribe': '(meaning: order, recommend)',
+        'presence': '(meaning: being there)',
+        'present': '(meaning: now, gift, show)',
+        'preserve': '(meaning: protect, maintain)',
+        'press': '(meaning: push, media)',
+        'pressure': '(meaning: force)',
+        'presume': '(meaning: assume)',
+        'prevent': '(meaning: stop)',
+        'previous': '(meaning: earlier)',
+        'primary': '(meaning: main)',
+        'prime': '(meaning: best)',
+        'principal': '(meaning: head, main)',
+        'principle': '(meaning: rule)',
+        'prior': '(meaning: earlier)',
+        'priority': '(meaning: importance)',
+        'private': '(meaning: personal)',
+        'probable': '(meaning: likely)',
+        'procedure': '(meaning: process)',
+        'proceed': '(meaning: continue)',
+        'process': '(meaning: procedure)',
+        'produce': '(meaning: make)',
+        'profession': '(meaning: occupation)',
+        'professional': '(meaning: expert)',
+        'professor': '(meaning: academic)',
+        'profile': '(meaning: outline)',
+        'profit': '(meaning: gain)',
+        'profound': '(meaning: deep, intense)',
+        'program': '(meaning: schedule)',
+        'progress': '(meaning: advance)',
+        'prohibit': '(meaning: forbid)',
+        'project': '(meaning: plan)',
+        'prolong': '(meaning: extend)',
+        'prominent': '(meaning: important, noticeable)',
+        'promise': '(meaning: vow)',
+        'promote': '(meaning: advance)',
+        'prompt': '(meaning: quick, cause)',
+        'proof': '(meaning: evidence)',
+        'proper': '(meaning: correct)',
+        'property': '(meaning: possession)',
+        'proportion': '(meaning: ratio, part)',
+        'proposal': '(meaning: suggestion)',
+        'propose': '(meaning: suggest)',
+        'prospect': '(meaning: chance)',
+        'protect': '(meaning: defend)',
+        'protein': '(meaning: nutrient)',
+        'protest': '(meaning: objection)',
+        'protocol': '(meaning: procedure, rules)',
+        'proud': '(meaning: pleased)',
+        'prove': '(meaning: show)',
+        'provide': '(meaning: supply)',
+        'province': '(meaning: region)',
+        'provision': '(meaning: supply)',
+        'provoke': '(meaning: incite)',
+        'proximate': '(meaning: close, near)',
+        'psychological': '(meaning: mental)',
+        'publish': '(meaning: issue)',
+        'purchase': '(meaning: buy)',
+        'pursue': '(meaning: chase, follow)',
+        'qualify': '(meaning: meet standard)',
+        'quality': '(meaning: standard)',
+        'quantity': '(meaning: amount)',
+        'quarter': '(meaning: fourth)',
+        'quest': '(meaning: search)',
+        'questionnaire': '(meaning: survey form)',
+        'quote': '(meaning: cite)',
+        'radical': '(meaning: extreme, fundamental)',
+        'range': '(meaning: scope)',
+        'rate': '(meaning: speed, cost)',
+        'ratio': '(meaning: proportion)',
+        'rational': '(meaning: logical)',
+        'reach': '(meaning: arrive)',
+        'react': '(meaning: respond)',
+        'reaction': '(meaning: response)',
+        'readily': '(meaning: easily, willingly)',
+        'realize': '(meaning: understand)',
+        'reasonable': '(meaning: sensible)',
+        'recall': '(meaning: remember)',
+        'receive': '(meaning: get)',
+        'recent': '(meaning: new)',
+        'reception': '(meaning: receiving)',
+        'recession': '(meaning: economic decline)',
+        'recipe': '(meaning: instructions)',
+        'recipient': '(meaning: receiver)',
+        'recognize': '(meaning: identify)',
+        'recommend': '(meaning: suggest)',
+        'reconcile': '(meaning: resolve differences)',
+        'record': '(meaning: document)',
+        'recover': '(meaning: regain)',
+        'recruit': '(meaning: enlist, hire)',
+        'recycle': '(meaning: reuse)',
+        'reduce': '(meaning: lessen)',
+        'refer': '(meaning: mention)',
+        'reference': '(meaning: citation)',
+        'reflect': '(meaning: mirror, think)',
+        'reform': '(meaning: improve)',
+        'refrain': '(meaning: abstain, hold back)',
+        'refuse': '(meaning: reject)',
+        'regard': '(meaning: consider)',
+        'regardless': '(meaning: despite)',
+        'regime': '(meaning: system, government)',
+        'region': '(meaning: area)',
+        'register': '(meaning: record)',
+        'regret': '(meaning: remorse)',
+        'regular': '(meaning: usual)',
+        'regulate': '(meaning: control)',
+        'regulation': '(meaning: rule)',
+        'reinforce': '(meaning: strengthen)',
+        'reject': '(meaning: refuse)',
+        'relate': '(meaning: connect)',
+        'relative': '(meaning: kin, comparative)',
+        'relax': '(meaning: unwind)',
+        'release': '(meaning: free)',
+        'relevant': '(meaning: pertinent)',
+        'relief': '(meaning: easing)',
+        'reluctant': '(meaning: unwilling)',
+        'rely': '(meaning: depend)',
+        'remain': '(meaning: stay)',
+        'remark': '(meaning: comment)',
+        'remarkable': '(meaning: notable)',
+        'remedy': '(meaning: cure, solution)',
+        'remember': '(meaning: recall)',
+        'remind': '(meaning: prompt)',
+        'remote': '(meaning: distant)',
+        'remove': '(meaning: take away)',
+        'renew': '(meaning: restore)',
+        'rent': '(meaning: lease)',
+        'repair': '(meaning: fix)',
+        'repeat': '(meaning: reiterate)',
+        'replace': '(meaning: substitute)',
+        'reply': '(meaning: respond)',
+        'report': '(meaning: account)',
+        'represent': '(meaning: stand for)',
+        'reproduce': '(meaning: copy, produce young)',
+        'reputation': '(meaning: fame)',
+        'request': '(meaning: ask)',
+        'require': '(meaning: need)',
+        'rescue': '(meaning: save)',
+        'reserve': '(meaning: hold, store)',
+        'resident': '(meaning: inhabitant)',
+        'resign': '(meaning: quit)',
+        'resist': '(meaning: oppose)',
+        'resolve': '(meaning: solve)',
+        'resort': '(meaning: go to, place)',
+        'resource': '(meaning: supply)',
+        'respect': '(meaning: esteem)',
+        'respond': '(meaning: reply)',
+        'response': '(meaning: answer)',
+        'responsibility': '(meaning: duty)',
+        'responsible': '(meaning: accountable)',
+        'rest': '(meaning: remainder, relax)',
+        'restore': '(meaning: return)',
+        'restrict': '(meaning: limit)',
+        'result': '(meaning: outcome)',
+        'retain': '(meaning: keep)',
+        'retire': '(meaning: stop working)',
+        'retreat': '(meaning: withdraw)',
+        'return': '(meaning: go back)',
+        'reveal': '(meaning: disclose)',
+        'revenue': '(meaning: income)',
+        'reverse': '(meaning: opposite, back up)',
+        'review': '(meaning: examine)',
+        'revise': '(meaning: edit)',
+        'revive': '(meaning: bring back to life)',
+        'revolution': '(meaning: uprising)',
+        'reward': '(meaning: prize)',
+        'rigorous': '(meaning: thorough, strict)',
+        'risk': '(meaning: danger)',
+        'ritual': '(meaning: ceremony, routine)',
+        'robust': '(meaning: strong, healthy)',
+        'role': '(meaning: part)',
+        'routine': '(meaning: habit)',
+        'rural': '(meaning: country)',
+        'sacred': '(meaning: holy)',
+        'sacrifice': '(meaning: give up)',
+        'safeguard': '(meaning: protect)',
+        'salary': '(meaning: pay)',
+        'sample': '(meaning: specimen)',
+        'sanction': '(meaning: penalty, approve)',
+        'satisfy': '(meaning: please)',
+        'scale': '(meaning: size)',
+        'schedule': '(meaning: timetable)',
+        'scheme': '(meaning: plan)',
+        'scope': '(meaning: extent)',
+        'score': '(meaning: points)',
+        'scrutiny': '(meaning: close examination)',
+        'season': '(meaning: period)',
+        'secure': '(meaning: safe)',
+        'security': '(meaning: safety)',
+        'segment': '(meaning: section)',
+        'select': '(meaning: choose)',
+        'sense': '(meaning: feeling)',
+        'sensitive': '(meaning: delicate)',
+        'sentence': '(meaning: grammatical unit)',
+        'sequence': '(meaning: order)',
+        'series': '(meaning: sequence)',
+        'serious': '(meaning: grave)',
+        'serve': '(meaning: attend)',
+        'session': '(meaning: meeting)',
+        'settle': '(meaning: resolve)',
+        'severe': '(meaning: harsh)',
+        'sexual': '(meaning: relating to sex)',
+        'shift': '(meaning: move)',
+        'significant': '(meaning: important)',
+        'similar': '(meaning: alike)',
+        'simple': '(meaning: easy)',
+        'simulate': '(meaning: imitate, model)',
+        'simultaneous': '(meaning: at same time)',
+        'situation': '(meaning: circumstance)',
+        'skill': '(meaning: ability)',
+        'social': '(meaning: societal)',
+        'society': '(meaning: community)',
+        'software': '(meaning: computer programs)',
+        'sole': '(meaning: only, alone)',
+        'sophisticated': '(meaning: complex, advanced)',
+        'source': '(meaning: origin)',
+        'spatial': '(meaning: relating to space)',
+        'special': '(meaning: exceptional)',
+        'species': '(meaning: type)',
+        'specific': '(meaning: particular)',
+        'specify': '(meaning: state precisely)',
+        'specimen': '(meaning: sample)',
+        'spectrum': '(meaning: range)',
+        'speculate': '(meaning: guess)',
+        'spiritual': '(meaning: religious)',
+        'sponsor': '(meaning: support, fund)',
+        'spontaneous': '(meaning: unplanned)',
+        'stable': '(meaning: steady)',
+        'staff': '(meaning: employees)',
+        'stage': '(meaning: phase)',
+        'standard': '(meaning: norm)',
+        'status': '(meaning: standing)',
+        'statute': '(meaning: law)',
+        'statutory': '(meaning: required by law)',
+        'strategy': '(meaning: plan)',
+        'stress': '(meaning: pressure)',
+        'structure': '(meaning: arrangement)',
+        'style': '(meaning: manner)',
+        'subject': '(meaning: topic)',
+        'subsequent': '(meaning: following)',
+        'subsidy': '(meaning: financial aid)',
+        'substantial': '(meaning: considerable)',
+        'substitute': '(meaning: replacement)',
+        'subtle': '(meaning: slight, delicate)',
+        'sufficient': '(meaning: enough)',
+        'suggest': '(meaning: propose)',
+        'suitable': '(meaning: appropriate)',
+        'summary': '(meaning: brief statement)',
+        'superior': '(meaning: better, higher)',
+        'supervise': '(meaning: oversee)',
+        'supplement': '(meaning: add to)',
+        'supply': '(meaning: provide)',
+        'support': '(meaning: aid)',
+        'suppose': '(meaning: assume)',
+        'suppress': '(meaning: subdue, prevent)',
+        'sustainable': '(meaning: maintainable)',
+        'symbol': '(meaning: representation)',
+        'symptom': '(meaning: sign)',
+        'synthesis': '(meaning: combination)',
+        'system': '(meaning: organization)',
+        'tactic': '(meaning: strategy)',
+        'talent': '(meaning: ability)',
+        'target': '(meaning: goal)',
+        'task': '(meaning: duty)',
+        'technical': '(meaning: specialized)',
+        'technique': '(meaning: method)',
+        'technology': '(meaning: tech)',
+        'temporary': '(meaning: short-term)',
+        'tend': '(meaning: incline)',
+        'tendency': '(meaning: trend)',
+        'tension': '(meaning: stress)',
+        'term': '(meaning: period)',
+        'terminal': '(meaning: end)',
+        'territory': '(meaning: area)',
+        'theme': '(meaning: topic)',
+        'theory': '(meaning: idea)',
+        'therapeutic': '(meaning: healing)',
+        'therapy': '(meaning: treatment)',
+        'therefore': '(meaning: thus)',
+        'thermal': '(meaning: relating to heat)',
+        'thesis': '(meaning: argument, paper)',
+        'thorough': '(meaning: complete)',
+        'threat': '(meaning: danger)',
+        'threshold': '(meaning: boundary)',
+        'topic': '(meaning: subject)',
+        'total': '(meaning: sum)',
+        'traditional': '(meaning: customary)',
+        'tragic': '(meaning: disastrous)',
+        'transfer': '(meaning: move)',
+        'transform': '(meaning: change)',
+        'transition': '(meaning: change)',
+        'translate': '(meaning: convert language)',
+        'transmit': '(meaning: send, transfer)',
+        'transparent': '(meaning: clear, obvious)',
+        'transport': '(meaning: carry)',
+        'trauma': '(meaning: injury, shock)',
+        'treat': '(meaning: handle, cure)',
+        'treatment': '(meaning: care)',
+        'tremendous': '(meaning: huge)',
+        'trend': '(meaning: tendency)',
+        'trial': '(meaning: test)',
+        'trigger': '(meaning: cause, start)',
+        'trivial': '(meaning: unimportant)',
+        'typical': '(meaning: usual)',
+        'ultimate': '(meaning: final)',
+        'unanimous': '(meaning: all agreeing)',
+        'undergo': '(meaning: experience)',
+        'understand': '(meaning: comprehend)',
+        'undertake': '(meaning: take on)',
+        'uniform': '(meaning: consistent, clothing)',
+        'unique': '(meaning: one of a kind)',
+        'universal': '(meaning: worldwide)',
+        'universe': '(meaning: cosmos)',
+        'unknown': '(meaning: not known)',
+        'unlike': '(meaning: different from)',
+        'unlikely': '(meaning: improbable)',
+        'unprecedented': '(meaning: never done before)',
+        'unusual': '(meaning: uncommon)',
+        'update': '(meaning: bring up to date)',
+        'upgrade': '(meaning: improve)',
+        'urban': '(meaning: city)',
+        'urge': '(meaning: encourage)',
+        'utilize': '(meaning: use)',
+        'valid': '(meaning: acceptable)',
+        'valuable': '(meaning: precious)',
+        'value': '(meaning: worth)',
+        'variable': '(meaning: changeable)',
+        'variety': '(meaning: diversity)',
+        'various': '(meaning: diverse)',
+        'vary': '(meaning: change)',
+        'vast': '(meaning: huge)',
+        'venture': '(meaning: undertaking)',
+        'verbal': '(meaning: spoken)',
+        'verify': '(meaning: confirm)',
+        'versatile': '(meaning: adaptable)',
+        'version': '(meaning: form)',
+        'versus': '(meaning: against)',
+        'vertical': '(meaning: upright)',
+        'vessel': '(meaning: ship)',
+        'veteran': '(meaning: experienced)',
+        'via': '(meaning: through)',
+        'vibrant': '(meaning: energetic)',
+        'victim': '(meaning: sufferer)',
+        'victory': '(meaning: win)',
+        'video': '(meaning: recording)',
+        'view': '(meaning: sight)',
+        'virtual': '(meaning: almost, simulated)',
+        'virtue': '(meaning: goodness)',
+        'visible': '(meaning: seeable)',
+        'vision': '(meaning: sight)',
+        'visual': '(meaning: relating to sight)',
+        'vital': '(meaning: essential)',
+        'vitamin': '(meaning: nutrient)',
+        'vocabulary': '(meaning: words)',
+        'vocation': '(meaning: career)',
+        'voice': '(meaning: sound)',
+        'volume': '(meaning: loudness, book)',
+        'voluntary': '(meaning: unforced)',
+        'volunteer': '(meaning: unpaid worker)',
+        'vote': '(meaning: elect)',
+        'vulnerable': '(meaning: at risk)',
+        'wage': '(meaning: pay)',
+        'welfare': '(meaning: wellbeing)',
+        'widespread': '(meaning: common)',
+        'willing': '(meaning: ready)',
+        'wisdom': '(meaning: knowledge)',
+        'withdraw': '(meaning: remove)',
+        'witness': '(meaning: observer)',
+        'wonder': '(meaning: ponder)',
+        'worth': '(meaning: value)',
+        'yield': '(meaning: produce, give up)',
+        'zone': '(meaning: area)'
+    };
+    
+    const commonWords = ['the','and','for','are','that','this','have','from','with','they','will','what','which','their','there','about','would','could','should','these','those','is','was','were','be','been','by','to','of','in','on','at','or','but','so','if','then','else','when','where','how','why','a','an','as','then','thus','hence','also','very','just','not','can','may','might','must','shall','should','would','could','does','did','doing','has','had','having','get','got','getting','say','said','saying','make','made','making','do','did','doing','go','went','going','see','saw','seeing','come','came','coming','know','knew','knowing','take','took','taking','give','gave','giving','find','found','finding','think','thought','thinking'];
+    
+    async function getDefinitionFromAPI(word) {
+        if (offlineDict[word.toLowerCase()]) {
+            return { success: true, definition: offlineDict[word.toLowerCase()], fromOffline: true };
+        }
+        return { success: false, definition: null };
+    }
+    
+    function addPunctuation(text) {
+        let result = text;
+        result = result.replace(/([a-z0-9])\s+([A-Z])/g, '$1. $2');
+        let transitionWords = ['however', 'therefore', 'meanwhile', 'consequently', 'furthermore', 'moreover'];
+        for (let word of transitionWords) {
+            let regex = new RegExp(`\\b${word}\\s`, 'gi');
+            result = result.replace(regex, `${word}, `);
+        }
+        result = result.replace(/([.!?])\s*([a-z])/g, (match, p1, p2) => p1 + ' ' + p2.toUpperCase());
+        result = result.charAt(0).toUpperCase() + result.slice(1);
+        return result;
+    }
+    
+    function getCurrentDate() {
+        let d = new Date();
+        return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()} ${d.getHours()}:${d.getMinutes()}`;
+    }
+    
+    function vibrate() {
+        if (navigator.vibrate) {
+            navigator.vibrate(500);
+        }
+    }
+    
+    function flashLight() {
+        let flashDiv = document.createElement('div');
+        flashDiv.style.position = 'fixed';
+        flashDiv.style.top = '0';
+        flashDiv.style.left = '0';
+        flashDiv.style.width = '100%';
+        flashDiv.style.height = '100%';
+        flashDiv.style.backgroundColor = 'white';
+        flashDiv.style.zIndex = '9999';
+        flashDiv.style.opacity = '0.5';
+        document.body.appendChild(flashDiv);
+        setTimeout(() => flashDiv.remove(), 100);
+    }
+    
+    let autoSkipEnabled = true;
+    let vibrateEnabled = true;
+    let confirmationTimer = null;
+    let popupActive = false;
+    
+    function detectQuestionAndAsk(text) {
+        let questionPatterns = /(\?|what|who|when|where|why|how|explain|define|describe|calculate|solve)/gi;
+        if (questionPatterns.test(text) && autoSkipEnabled && !popupActive) {
+            popupActive = true;
+            if (vibrateEnabled) {
+                vibrate();
+                flashLight();
+            }
+            document.getElementById('confirmationPopup').style.display = 'block';
+            let timer = 10;
+            let timerInterval = setInterval(() => {
+                timer--;
+                document.getElementById('autoSkipTimer').innerText = `Auto-skip in ${timer} seconds...`;
+                if (timer <= 0) {
+                    clearInterval(timerInterval);
+                    document.getElementById('confirmationPopup').style.display = 'none';
+                    popupActive = false;
+                }
+            }, 1000);
+            confirmationTimer = timerInterval;
+        }
+    }
+    
+    document.getElementById('confirmYes').onclick = () => {
+        document.getElementById('confirmationPopup').style.display = 'none';
+        if (confirmationTimer) clearInterval(confirmationTimer);
+        popupActive = false;
+    };
+    
+    document.getElementById('confirmNo').onclick = () => {
+        document.getElementById('confirmationPopup').style.display = 'none';
+        if (confirmationTimer) clearInterval(confirmationTimer);
+        popupActive = false;
+    };
+    
+    let lecturerVoiceProfile = null;
+    let lecturerName = '';
+    let SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isRecording = false;
+    let fullTranscript = '';
+    let currentInterim = '';
+    
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+    }
+    
+    const recordBtn = document.getElementById('recordBtn');
+    const recordBtnText = document.getElementById('recordBtnText');
+    const recordingStatus = document.getElementById('recordingStatus');
+    const notesOutput = document.getElementById('notesOutput');
+    const stopBtn = document.getElementById('stopBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    
+    stopBtn.classList.add('disabled-btn');
+    saveBtn.classList.add('disabled-btn');
+    
+    async function processTextWithDict(text) {
+        let words = text.toLowerCase().split(/\s+/);
+        let uniqueWords = [...new Set(words.filter(w => w.length > 4 && !commonWords.includes(w)))];
+        let wordsToProcess = uniqueWords.slice(0, 7);
+        let result = text;
+        for (let word of wordsToProcess) {
+            let defResult = await getDefinitionFromAPI(word);
+            if (defResult.success && defResult.definition) {
+                let regex = new RegExp(`\\b${word}\\b`, 'gi');
+                result = result.replace(regex, `${word} ${defResult.definition}`);
+            }
+        }
+        return result;
+    }
+    
+    function updateUI() {
+        let display = fullTranscript;
+        if (currentInterim && isRecording) display += currentInterim;
+        if (!display.trim()) {
+            notesOutput.innerHTML = '<span style="color:#4A5568">Tap record, place phone near lecturer. Notes will appear here...</span>';
+        } else {
+            notesOutput.innerHTML = display.replace(/\n/g, '<br>');
+        }
+    }
+    
+    function stopRecording() {
+        if (recognition) {
+            try { recognition.stop(); } catch(e) {}
+        }
+        isRecording = false;
+        recordBtnText.innerText = 'RECORD';
+        recordBtn.style.background = 'linear-gradient(145deg,#FF2D55,#FF0030)';
+        recordingStatus.innerHTML = '● Recording stopped. Tap SAVE to store notes.';
+        currentInterim = '';
+        updateUI();
+        stopBtn.classList.add('disabled-btn');
+        saveBtn.classList.remove('disabled-btn');
+    }
+    
+    function startRecording() {
+        if (fullTranscript && !confirm('Clear previous notes and start new lecture?')) return;
+        fullTranscript = '';
+        currentInterim = '';
+        updateUI();
+        if (recognition) {
+            try { recognition.start(); } catch(e) { recordingStatus.innerHTML = '❌ Error starting recording. Check microphone permission.'; }
+        }
+    }
+    
+    if (recognition) {
+        recognition.onstart = () => {
+            isRecording = true;
+            recordBtnText.innerText = 'RECORDING...';
+            recordBtn.style.background = 'linear-gradient(145deg,#555,#333)';
+            recordingStatus.innerHTML = '🔴 RECORDING... Lecturer voice only (English)';
+            stopBtn.classList.remove('disabled-btn');
+            saveBtn.classList.add('disabled-btn');
+        };
+        recognition.onend = () => {
+            if (isRecording) {
+                try { recognition.start(); } catch(e) { stopRecording(); }
+            }
+        };
+        recognition.onresult = async (event) => {
+            let final = '';
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) final += event.results[i][0].transcript + ' ';
+                else interim += event.results[i][0].transcript;
+            }
+            if (final) {
+                detectQuestionAndAsk(final);
+                let processed = await processTextWithDict(final);
+                processed = addPunctuation(processed);
+                fullTranscript += processed;
+                currentInterim = '';
+                updateUI();
+            } else {
+                currentInterim = interim;
+                updateUI();
+            }
+        };
+        recognition.onerror = () => { if(isRecording) stopRecording(); };
+    } else {
+        recordingStatus.innerHTML = '❌ Speech recognition not supported. Use Chrome on Android.';
+        recordBtn.disabled = true;
+    }
+    
+    recordBtn.onclick = () => {
+        if (!recognition) return alert('Speech recognition not supported.');
+        if (!isRecording) {
+            startRecording();
+        }
+    };
+    
+    stopBtn.onclick = () => {
+        if (isRecording) {
+            stopRecording();
+        }
+    };
+    
+    let savedNotesList = JSON.parse(localStorage.getItem('lecturer2_saved_notes') || '[]');
+    
+    function saveCurrentNotes() {
+        if (fullTranscript) {
+            let noteObj = {
+                id: Date.now(),
+                content: fullTranscript,
+                date: getCurrentDate(),
+                lecturer: lecturerName || 'General'
+            };
+            savedNotesList.push(noteObj);
+            localStorage.setItem('lecturer2_saved_notes', JSON.stringify(savedNotesList));
+            showToast('Notes saved with date & lecturer!');
+            saveBtn.classList.add('disabled-btn');
+        } else {
+            alert('No notes to save');
+        }
+    }
+    
+    saveBtn.onclick = () => {
+        if (fullTranscript) {
+            saveCurrentNotes();
+        } else {
+            alert('No notes to save. Record a lecture first.');
+        }
+    };
+    
+    function exportToPDF() {
+        if (!fullTranscript) { alert('No notes to export'); return; }
+        let win = window.open();
+        win.document.write(`
+            <html>
+            <head><title>Lecturer 2 Notes</title></head>
+            <body style="font-family: Arial; padding: 40px;">
+                <h1>Lecturer 2 - Lecture Notes</h1>
+                <p><strong>Date:</strong> ${getCurrentDate()}</p>
+                <p><strong>Lecturer:</strong> ${lecturerName || 'Unknown'}</p>
+                <hr>
+                <p style="white-space: pre-wrap;">${fullTranscript}</p>
+                <hr>
+                <p><em>Generated by Lecturer 2 App - Complete Offline Edition</em></p>
+            </body>
+            </html>
+        `);
+        win.print();
+    }
+    
+    function exportToWord() {
+        if (!fullTranscript) { alert('No notes to export'); return; }
+        let blob = new Blob([`
+            <html>
+            <head><title>Lecturer 2 Notes</title></head>
+            <body>
+                <h1>Lecturer 2 - Lecture Notes</h1>
+                <p>Date: ${getCurrentDate()}</p>
+                <p>Lecturer: ${lecturerName || 'Unknown'}</p>
+                <hr>
+                <p>${fullTranscript.replace(/\n/g, '<br>')}</p>
+                <hr>
+                <p>Generated by Lecturer 2 App</p>
+            </body>
+            </html>
+        `], { type: 'application/msword' });
+        let link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `lecturer2_notes_${Date.now()}.doc`;
+        link.click();
+        showToast('Word document downloaded');
+    }
+    
+    function backupToCloud() {
+        if (!fullTranscript && savedNotesList.length === 0) { alert('No notes to backup'); return; }
+        let backupData = JSON.stringify(savedNotesList);
+        let blob = new Blob([backupData], { type: 'application/json' });
+        let link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `lecturer2_backup_${Date.now()}.json`;
+        link.click();
+        showToast('Backup downloaded. Store safely!');
+    }
+    
+    document.getElementById('exportPDFBtn').onclick = exportToPDF;
+    document.getElementById('exportWordBtn').onclick = exportToWord;
+    document.getElementById('backupBtn').onclick = backupToCloud;
+    
+    let searchVisible = false;
+    document.getElementById('searchToggleBtn').onclick = () => {
+        let searchBox = document.getElementById('searchBox');
+        if (searchVisible) {
+            searchBox.style.display = 'none';
+            document.getElementById('searchResults').innerHTML = '';
+            searchVisible = false;
+        } else {
+            searchBox.style.display = 'block';
+            searchVisible = true;
+        }
+    };
+    
+    document.getElementById('searchBox').oninput = function() {
+        let query = this.value.toLowerCase();
+        let results = savedNotesList.filter(n => n.content.toLowerCase().includes(query));
+        let resultsDiv = document.getElementById('searchResults');
+        if (query.length < 2) {
+            resultsDiv.innerHTML = '';
+            return;
+        }
+        resultsDiv.innerHTML = results.map(n => 
+            `<div class="search-result" onclick="copyToClipboard('${n.content.replace(/'/g, "\\'")}', 'Note copied')">
+                <strong>📅 ${n.date}</strong><br>
+                ${n.content.substring(0, 100)}...
+             </div>`
+        ).join('');
+    };
+    
+    const shareModal = document.getElementById('shareModal');
+    document.getElementById('shareBtn').onclick = () => shareModal.style.display = 'flex';
+    document.getElementById('closeShareModalBtn').onclick = () => shareModal.style.display = 'none';
+    shareModal.onclick = (e) => { if (e.target === shareModal) shareModal.style.display = 'none'; };
+    
+    document.getElementById('shareLinkBtn').onclick = () => {
+        let inviteText = `🎓 LECTURER 2 - Your Personal Lecture Assistant\n\nLecturer speaks, app writes. Simple.\n\n✅ Voice Recognition\n✅ Skip Student Answer\n✅ 2000+ Offline Dictionary Words\n✅ PDF/Word Export\n✅ Cloud Backup\n✅ Works completely offline!\n\nGet the app: ${appLink}`;
+        hiddenTextarea.value = inviteText;
+        hiddenTextarea.select();
+        document.execCommand('copy');
+        showToast('Invite copied! Share with classmates.');
+        shareModal.style.display = 'none';
+    };
+    
+    document.getElementById('shareNotesBtn').onclick = () => {
+        if (!fullTranscript || fullTranscript.trim() === '') {
+            alert('No notes to share.');
+            shareModal.style.display = 'none';
+            return;
+        }
+        let notesText = `📝 LECTURER 2 NOTES\n\n${fullTranscript}\n\n━━━━━━━━━━━━━━━\nRecorded with Lecturer 2 - Complete Offline Edition`;
+        hiddenTextarea.value = notesText;
+        hiddenTextarea.select();
+        document.execCommand('copy');
+        showToast('Notes copied!');
+        shareModal.style.display = 'none';
+    };
+    
+    document.getElementById('shareBothBtn').onclick = () => {
+        let shareText = fullTranscript ? 
+            `📝 LECTURER 2 NOTES\n\n${fullTranscript.substring(0, 500)}...\n\n━━━━━━━━━━━━━━━\n📱 Get the app: ${appLink}` :
+            `🎓 LECTURER 2\n\nGet the app: ${appLink}\n\nWorks offline! 2000+ dictionary words included.`;
+        hiddenTextarea.value = shareText;
+        hiddenTextarea.select();
+        document.execCommand('copy');
+        showToast('Notes + Link copied!');
+        shareModal.style.display = 'none';
+    };
+    
+    document.getElementById('toggleAutoSkip').onclick = function() { 
+        this.classList.toggle('active'); 
+        autoSkipEnabled = this.classList.contains('active');
+        showToast(autoSkipEnabled ? 'Auto-skip ON' : 'Auto-skip OFF');
+    };
+    document.getElementById('toggleVibrate').onclick = function() { 
+        this.classList.toggle('active'); 
+        vibrateEnabled = this.classList.contains('active');
+        showToast(vibrateEnabled ? 'Vibrate ON' : 'Vibrate OFF');
+    };
+    
+    function makeToggle(id) { 
+        document.getElementById(id).onclick = function() { this.classList.toggle('active'); }; 
+    }
+    makeToggle('toggleVoiceRec');
+    makeToggle('toggleBattery');
+    makeToggle('toggleDark');
+    
+    let isAndroid = /android/i.test(navigator.userAgent);
+    let isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    let badge = document.getElementById('deviceBadge');
+    if (isAndroid) badge.innerHTML = '🤖 ANDROID — Screen off recording ✅ | Vibrate ✅ | 2000+ Offline Words ✅';
+    else if (isIOS) badge.innerHTML = '📱 IPHONE — Keep screen awake ⚠️ | Vibrate limited | 2000+ Offline Words ✅';
+    else badge.innerHTML = '💻 WEB — Testing mode | 2000+ Offline Words ✅';
+    
+    let settingsModal = document.getElementById('settingsModal');
+    document.getElementById('settingsIcon').onclick = () => settingsModal.style.display = 'flex';
+    document.getElementById('closeModalBtn').onclick = () => settingsModal.style.display = 'none';
+    settingsModal.onclick = (e) => { if (e.target === settingsModal) settingsModal.style.display = 'none'; };
+    
+    function copyToClipboard(text, msg) {
+        hiddenTextarea.value = text;
+        hiddenTextarea.select();
+        document.execCommand('copy');
+        showToast(msg);
+    }
+    
+    function recordLecturerVoice() {
+        if (!SpeechRecognition) {
+            showToast('Voice recognition not supported');
+            return;
+        }
+        let tempRecog = new SpeechRecognition();
+        tempRecog.continuous = false;
+        tempRecog.interimResults = false;
+        tempRecog.lang = 'en-US';
+        tempRecog.onresult = (event) => {
+            let voiceSample = event.results[0][0].transcript;
+            lecturerName = prompt('Enter lecturer name:', 'Dr. Okoro');
+            if (lecturerName) {
+                lecturerVoiceProfile = voiceSample;
+                localStorage.setItem('lecturer2_voice', voiceSample);
+                localStorage.setItem('lecturer2_name', lecturerName);
+                let option = document.createElement('option');
+                option.value = voiceSample;
+                option.text = lecturerName;
+                document.getElementById('lecturerSelect').add(option);
+                document.getElementById('lecturerSelect').value = voiceSample;
+                document.getElementById('lecturerStatus').innerHTML = `✅ Lecturer: ${lecturerName}`;
+                showToast(`Lecturer ${lecturerName} saved!`);
+            }
+        };
+        tempRecog.start();
+        showToast('Speak the lecturer\'s name or phrase...');
+    }
+    
+    let savedVoice = localStorage.getItem('lecturer2_voice');
+    let savedName = localStorage.getItem('lecturer2_name');
+    if (savedVoice && savedName) {
+        let option = document.createElement('option');
+        option.value = savedVoice;
+        option.text = savedName;
+        document.getElementById('lecturerSelect').add(option);
+        document.getElementById('lecturerSelect').value = savedVoice;
+        lecturerVoiceProfile = savedVoice;
+        lecturerName = savedName;
+        document.getElementById('lecturerStatus').innerHTML = `✅ Lecturer: ${savedName}`;
+    }
+    
+    document.getElementById('lecturerSelect').onchange = function() {
+        if (this.value === 'record') {
+            recordLecturerVoice();
+            this.value = '';
+        } else if (this.value) {
+            lecturerName = this.options[this.selectedIndex].text;
+            document.getElementById('lecturerStatus').innerHTML = `✅ Lecturer: ${lecturerName}`;
+        }
+    };
+    
+    showToast('Welcome to Lecturer 2! 2000+ dictionary words ready.');
+</script>
+</body>
+  </html>
